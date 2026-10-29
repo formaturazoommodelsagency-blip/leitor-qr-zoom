@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leitor QR | Zoom</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#f3f4f7;margin:0;padding:20px;color:#162d4f}
+main{background:white;max-width:430px;margin:20px auto;padding:22px;border-radius:16px;text-align:center}
+h1{font-size:24px}
+button{width:100%;padding:15px;margin:10px 0;background:#162d4f;color:white;border:0;border-radius:8px;font-size:16px}
+#reader{width:100%;margin:15px 0}
+#code{overflow-wrap:anywhere;font-weight:bold}
+</style>
+</head>
+<body>
+<main>
+<h1>ZOOM AGÊNCIA DE MODELOS</h1>
+<p>Leitor de QR Code — Formatura 2026</p>
+<button onclick="start()">ABRIR CÂMERA</button>
+<div id="reader"></div>
+<p id="status">Pronto para ler o convite.</p>
+<p id="code"></p>
+<button id="copy" hidden onclick="copyCode()">COPIAR CÓDIGO</button>
+</main>
+<script>
+let scanner;
+let code='';
+async function start(){
+ const status=document.getElementById('status');
+ try{
+  if(scanner){try{await scanner.stop()}catch(e){} scanner.clear();}
+  scanner=new Html5Qrcode('reader');
+  status.textContent='Aponte a câmera para o QR Code.';
+  await scanner.start({facingMode:'environment'},{fps:10,qrbox:220},async text=>{
+   code=text.trim();
+   await scanner.stop();
+   scanner.clear();
+   document.getElementById('code').textContent=code;
+   document.getElementById('copy').hidden=false;
+   status.textContent='Código lido com sucesso!';
+  },()=>{});
+ }catch(e){status.textContent='Não foi possível abrir a câmera: '+e.message;}
+}
+async function copyCode(){
+ try{
+  await navigator.clipboard.writeText(code);
+  document.getElementById('status').textContent='Código copiado! Abra o check-in da Zoom e cole no campo de consulta.';
+ }catch(e){document.getElementById('status').textContent='Selecione e copie o código exibido acima.';}
+}
+</script>
+</body>
+</html>
