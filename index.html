@@ -10,44 +10,56 @@ body{font-family:Arial,sans-serif;background:#f3f4f7;margin:0;padding:20px;color
 main{background:white;max-width:430px;margin:20px auto;padding:22px;border-radius:16px;text-align:center}
 h1{font-size:24px}
 button{width:100%;padding:15px;margin:10px 0;background:#162d4f;color:white;border:0;border-radius:8px;font-size:16px}
+button:disabled{opacity:.5}
 #reader{width:100%;margin:15px 0}
-#code{overflow-wrap:anywhere;font-weight:bold}
+#status{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
 <main>
 <h1>ZOOM AGÊNCIA DE MODELOS</h1>
 <p>Leitor de QR Code — Formatura 2026</p>
-<button onclick="start()">ABRIR CÂMERA</button>
+<button id="startBtn" onclick="start()">ABRIR CÂMERA</button>
 <div id="reader"></div>
-<p id="status">Pronto para ler o convite.</p>
-<p id="code"></p>
-<button id="copy" hidden onclick="copyCode()">COPIAR CÓDIGO</button>
+<p id="status" role="status">Pronto para ler o convite.</p>
 </main>
 <script>
-let scanner;
-let code='';
+const CHECKIN_URL='https://script.google.com/macros/s/AKfycbxXQzczYE_oKJhZvaD8Z0WRvhkTKAaPdPf3DVWLMDkOIsjQJYLvQFcI580oOQD8_jWZ/exec';
+let scanner=null;
+let processing=false;
 async function start(){
  const status=document.getElementById('status');
+ const button=document.getElementById('startBtn');
+ if(processing)return;
  try{
-  if(scanner){try{await scanner.stop()}catch(e){} scanner.clear();}
+  if(scanner){
+   try{if(scanner.isScanning)await scanner.stop();}catch(e){}
+   try{scanner.clear();}catch(e){}
+  }
   scanner=new Html5Qrcode('reader');
   status.textContent='Aponte a câmera para o QR Code.';
-  await scanner.start({facingMode:'environment'},{fps:10,qrbox:220},async text=>{
-   code=text.trim();
-   await scanner.stop();
-   scanner.clear();
-   document.getElementById('code').textContent=code;
-   document.getElementById('copy').hidden=false;
-   status.textContent='Código lido com sucesso!';
-  },()=>{});
- }catch(e){status.textContent='Não foi possível abrir a câmera: '+e.message;}
-}
-async function copyCode(){
- try{
-  await navigator.clipboard.writeText(code);
-  document.getElementById('status').textContent='Código copiado! Abra o check-in da Zoom e cole no campo de consulta.';
- }catch(e){document.getElementById('status').textContent='Selecione e copie o código exibido acima.';}
+  await scanner.start(
+   {facingMode:'environment'},
+   {fps:10,qrbox:220},
+   async decoded=>{
+    if(processing)return;
+    const code=String(decoded||'').trim().toUpperCase();
+    if(!/^ZOOM26-[A-Z0-9]+$/.test(code)){
+     status.textContent='Este QR Code não é um convite Zoom válido.';
+     return;
+    }
+    processing=true;
+    button.disabled=true;
+    status.textContent='Código reconhecido. Abrindo check-in...';
+    try{if(scanner.isScanning)await scanner.stop();}catch(e){}
+    window.location.assign(CHECKIN_URL+'?code='+encodeURIComponent(code));
+   },
+   ()=>{}
+  );
+ }catch(e){
+  status.textContent='Não foi possível abrir a câmera: '+(e.message||e);
+  button.disabled=false;
+ }
 }
 </script>
 </body>
